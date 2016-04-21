@@ -1,7 +1,7 @@
 ## AndroidSdkSync4Mirror
 
-Android SDK Sync for Mirror.site
-一个为镜像站所用的Android SDK 更新脚本
+Android SDK Sync for Mirror.site  
+一个为镜像站所用的Android SDK 更新脚本  
 (话说境外也用不上这玩意儿,就没英文说明了)
 
 * * *
@@ -23,6 +23,6 @@ Android SDK Sync for Mirror.site
 
 ## 关于我们
 
-郑州大学开源镜像站维护小组
-Flicker: ffflicker#gmail.com
+郑州大学开源镜像站维护小组  
+Flicker: ffflicker#gmail.com  
 dangge: i@dangge.moe  
