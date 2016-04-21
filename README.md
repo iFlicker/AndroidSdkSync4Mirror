@@ -2,7 +2,7 @@
 
 Android SDK Sync for Mirror.site
 一个为镜像站所用的Android SDK 更新脚本
-(话说境外也用不上这玩意儿,就没英文说明了)  
+(话说境外也用不上这玩意儿,就没英文说明了)
 
 * * *
 
