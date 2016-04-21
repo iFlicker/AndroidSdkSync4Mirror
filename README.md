@@ -25,4 +25,4 @@ Android SDK Sync for Mirror.site
 
 郑州大学开源镜像站维护小组  
 Flicker: ffflicker#gmail.com  
-dangge: i@dangge.moe  
+dangge: i#dangge.moe  
