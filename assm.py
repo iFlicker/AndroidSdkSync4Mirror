@@ -2,13 +2,18 @@
 
 import getopt
 import sys
+import urllib2
+
 from loger import Logger
 import json
+from parser import HParser
 
 global syncdir   #更新地址
 global logdir    #日志存放地址
 global checktime #检查时间间隔
 global upstream  #上游源地址
+
+urllist = ["/","/extras/auto/","/extras/gapid/","/extras/intel/"]
 
 crlog = Logger()
 
@@ -54,5 +59,30 @@ def pconfig():
     checktime = decoded["checktime"]
     upstream = decoded["upstream"]
 
-pconfig()
 
+
+#获取下载列表
+def getlist(url):
+    #url = "http://mirrors.opencas.cn/android/repository/"
+    str = urllib2.urlopen(url, timeout=10).read()
+    my = HParser()
+    my.feed(str)
+    strlist = my.xs
+    newdat = []
+
+    for x in range(0, len(strlist)):
+        if strlist[x].split('.')[-1] == "xml":
+            newdat.append(strlist[x])
+        if strlist[x].split('.')[-1] == "zip":
+            newdat.append(strlist[x])
+    for x in newdat:
+        print url+x
+    #return newdat
+
+
+
+pconfig()
+getlist(upstream+urllist[0])
+getlist(upstream+urllist[1])
+getlist(upstream+urllist[2])
+getlist(upstream+urllist[3])
