@@ -4,11 +4,10 @@ import getopt
 import os
 import sys
 import urllib2
-
+import json
 import time
 
 from loger import Logger
-import json
 from parser import HParser
 
 global syncdir   #更新地址
@@ -125,8 +124,10 @@ def timecycle():
     pass
 
 #检查fileHeader_Last-Modified-Time
-def checkfile():
-
+def checkfile(url):
+    tmpres = urllib2.urlopen(url)
+    lmt = tmpres.info().getheader('Last-Modified')
+    # last work point ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pass
 
 
