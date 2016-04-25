@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import getopt
+import os
 import sys
 import urllib2
+
+import time
 
 from loger import Logger
 import json
@@ -13,9 +16,15 @@ global logdir    #日志存放地址
 global checktime #检查时间间隔
 global upstream  #上游源地址
 
-urllist = ["/","/extras/auto/","/extras/gapid/","/extras/intel/"]
+global flags
+flags = "null"
+global timee
+timee = [0]
 
-crlog = Logger()
+urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/")
+
+crlog = Logger() #实例化日志管理类
+my = HParser()   #实例化解析类
 
 # 程序入口,参数操作
 option,args = getopt.getopt(sys.argv[1:],"Vhs:",["version","help","start","stop","status"])
@@ -60,12 +69,11 @@ def pconfig():
     upstream = decoded["upstream"]
 
 
-
 #获取下载列表
 def getlist(url):
     #url = "http://mirrors.opencas.cn/android/repository/"
     str = urllib2.urlopen(url, timeout=10).read()
-    my = HParser()
+
     my.feed(str)
     strlist = my.xs
     newdat = []
@@ -77,12 +85,55 @@ def getlist(url):
             newdat.append(strlist[x])
     for x in newdat:
         print url+x
-    #return newdat
+    return newdat
+
+#urllib.urlretrieve的参数reporthook回调函数
+def report(count, blockSize, totalSize):
+    global timee
+    #按50个块为一个计速单位
+    if count%50==0:
+        timee.append(time.time())
+    sped =  int(( ((blockSize*50)/(timee[-1]-timee[-2])) / (1000*1000) )*1000)
+    sped = str(sped) + "Kb/s"
+    percent = int(count*blockSize*100/totalSize)
+    view_bar(num=percent,sum=100,bar_word=":",speed=sped)
+
+#显示下载进度,由urllib.urlretrieve的参数reporthook回调函数report()来调用
+def view_bar(num=1, sum=100, bar_word=":",speed="0"):
+    global flags
+    global timee
+    rate = float(num) / float(sum)
+    rate_num = int(rate * 100)
+    print '\r%d%% :' %(rate_num),
+    for i in range(0, num):
+        os.write(1, bar_word)
+    os.write(1,speed)
+    if num == sum:
+        print "complete"
+        flags = "complete"
+        timee = [0]
+    sys.stdout.flush()
+
+#任务开始
+def taskbegin():
+
+    pass
+
+#按时调动taskbegin
+def timecycle():
+
+    pass
+
+#检查fileHeader_Last-Modified-Time
+def checkfile():
+
+    pass
 
 
-
+#默认执行顺序列表
 pconfig()
 getlist(upstream+urllist[0])
 getlist(upstream+urllist[1])
 getlist(upstream+urllist[2])
 getlist(upstream+urllist[3])
+
