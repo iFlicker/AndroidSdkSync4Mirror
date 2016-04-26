@@ -2,7 +2,7 @@
 
 import HTMLParser
 
-class HParser(HTMLParser.HTMLParser):
+class Hparser(HTMLParser.HTMLParser):
     xs = []
     def __init__(self):
         HTMLParser.HTMLParser.__init__(self)

@@ -8,7 +8,7 @@ import json
 import time
 
 from loger import Logger
-from parser import HParser
+from parser import Hparser
 
 global syncdir   #更新地址
 global logdir    #日志存放地址
@@ -23,7 +23,7 @@ timee = [0]
 urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/")
 
 crlog = Logger() #实例化日志管理类
-my = HParser()   #实例化解析类
+my = Hparser()   #实例化解析类
 
 # 程序入口,参数操作
 option,args = getopt.getopt(sys.argv[1:],"Vhs:",["version","help","start","stop","status"])
