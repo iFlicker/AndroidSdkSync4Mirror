@@ -8,21 +8,20 @@ import time
 #__metaclass__ = type
 
 class Logger(object):
-    def __init__(self):
-        filename = time.strftime('%Y-%m-%d',time.localtime(time.time()))
+    # 构造函数初始化日志类的相关配置
+    def __init__(self,logdir):
+        filename = time.strftime('%Y-%m-%d',time.localtime(time.time())) # 获取当前时间
         logging.basicConfig(level = logging.DEBUG,
                             format = '%(asctime)s [%(levelname)s] %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S',
-                            filename = filename + ".log",
+                            datefmt ='%Y-%m-%d %H:%M:%S',
+                            filename = logdir + "assm " + filename + ".log",
                             filemode = 'a'
         )
-
+        # 日志输出到控制台
         tlog = logging.StreamHandler()
         tlog.setLevel(logging.DEBUG)
-
         formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
         tlog.setFormatter(formatter)
-
         logging.getLogger("").addHandler(tlog)
 
     def debug(self,msg):

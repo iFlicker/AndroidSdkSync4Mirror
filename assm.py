@@ -3,6 +3,7 @@
 import getopt
 import os
 import sys
+import urllib
 import urllib2
 import json
 import time
@@ -20,10 +21,11 @@ flags = "null"
 global timee
 timee = [0]
 
-urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/")
+urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/","/sys-img/android/","/sys-img/android-tv/","/sys-img/android-wear/","/sys-img/google_apis/","/sys-img/x86/")
 
-crlog = Logger() #实例化日志管理类
+crlog = Logger(logdir) #实例化日志管理类
 my = Hparser()   #实例化解析类
+
 
 # 程序入口,参数操作
 option,args = getopt.getopt(sys.argv[1:],"Vhs:",["version","help","start","stop","status"])
@@ -72,7 +74,6 @@ def pconfig():
 def getlist(url):
     #url = "http://mirrors.opencas.cn/android/repository/"
     str = urllib2.urlopen(url, timeout=10).read()
-
     my.feed(str)
     strlist = my.xs
     newdat = []
@@ -82,8 +83,7 @@ def getlist(url):
             newdat.append(strlist[x])
         if strlist[x].split('.')[-1] == "zip":
             newdat.append(strlist[x])
-    for x in newdat:
-        print url+x
+    my.xs = []
     return newdat
 
 #urllib.urlretrieve的参数reporthook回调函数
@@ -130,11 +130,57 @@ def checkfile(url):
     # last work point ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     pass
 
+def listanalyser(url):
+
+    pass
+
+#下载并写入status.list
+def downandwrite(liist):
+    global syncdir
+    global upstream
+    for x in liist:
+        urllib.urlretrieve(upstream + x, syncdir+ x, reporthook=report)
+
+    pass
+
+#判断是不是第一次运行
+def isFirstrun():
+
+    global syncdir
+    if not os.path.exists("./status.list"):
+        crlog.info("first run")
+        #创建文件夹
+        crlog.info("create related directory")
+        for x in urllist:
+            os.makedirs(syncdir + x)
+
+        # 传入list并调用downandwrite()
+        pass
+    else:
+        crlog.info("not first, will check last sync time")
+        # 调用 检查上次更新时间 函数
+        pass
+    pass
 
 #默认执行顺序列表
 pconfig()
-getlist(upstream+urllist[0])
-getlist(upstream+urllist[1])
-getlist(upstream+urllist[2])
-getlist(upstream+urllist[3])
+for x1 in getlist(upstream+urllist[0]):
+    print x1
+for x2 in getlist(upstream+urllist[1]):
+    print x2
+for x3 in getlist(upstream+urllist[2]):
+    print x3
+for x4 in getlist(upstream+urllist[3]):
+    print x4
+for x5 in getlist(upstream+urllist[4]):
+    print x5
+for x6 in getlist(upstream+urllist[5]):
+    print x6
+for x7 in getlist(upstream+urllist[6]):
+    print x7
+for x8 in getlist(upstream+urllist[7]):
+    print x8
+for x9 in getlist(upstream+urllist[8]):
+    print x9
+
 
