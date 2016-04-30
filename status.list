@@ -1,5 +1,6 @@
 {
   "lastsynctime":"None",
+  "isLastsyncSuccess":"False",
   "/":
   {
     "file1.zip":"2013-04-08",

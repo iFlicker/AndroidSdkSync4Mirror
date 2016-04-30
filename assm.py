@@ -20,7 +20,7 @@ global flags
 flags = "null"
 global timee
 timee = [0]
-
+global urllist
 urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/","/sys-img/android/","/sys-img/android-tv/","/sys-img/android-wear/","/sys-img/google_apis/","/sys-img/x86/")
 
 crlog = Logger(logdir) #实例化日志管理类
@@ -70,7 +70,7 @@ def pconfig():
     upstream = decoded["upstream"]
 
 
-#获取下载列表
+#tools->获取下载列表
 def getlist(url):
     #url = "http://mirrors.opencas.cn/android/repository/"
     str = urllib2.urlopen(url, timeout=10).read()
@@ -85,6 +85,34 @@ def getlist(url):
             newdat.append(strlist[x])
     my.xs = []
     return newdat
+
+#分别获取所有目录下的文件,挑出xml单独放入
+def supergetlist(url):
+    global urllist
+    allist = [[] for i in range(10)]
+
+    allist[0] = getlist(url + urllist[0])
+    allist[1] = getlist(url + urllist[1])
+    allist[2] = getlist(url + urllist[2])
+    allist[3] = getlist(url + urllist[3])
+    allist[4] = getlist(url + urllist[4])
+    allist[5] = getlist(url + urllist[5])
+    allist[6] = getlist(url + urllist[6])
+    allist[7] = getlist(url + urllist[7])
+    allist[8] = getlist(url + urllist[8])
+
+    delallist = [[] for i in range(9)]
+    #将xml元素存入allist[9],并标记入delallist
+    for num in range(0,9):
+        for strr in allist[num]:
+            if "xml" in strr:
+                allist[9].append(urllist[num] + strr)
+                delallist[num].append(strr)  #将xml元素下标存入delallist
+    # 删除xml元素
+    for s in range(0,9):
+        for sx in delallist[s]:
+            allist[s].remove(sx)
+    return allist
 
 #urllib.urlretrieve的参数reporthook回调函数
 def report(count, blockSize, totalSize):
@@ -164,23 +192,6 @@ def isFirstrun():
 
 #默认执行顺序列表
 pconfig()
-for x1 in getlist(upstream+urllist[0]):
-    print x1
-for x2 in getlist(upstream+urllist[1]):
-    print x2
-for x3 in getlist(upstream+urllist[2]):
-    print x3
-for x4 in getlist(upstream+urllist[3]):
-    print x4
-for x5 in getlist(upstream+urllist[4]):
-    print x5
-for x6 in getlist(upstream+urllist[5]):
-    print x6
-for x7 in getlist(upstream+urllist[6]):
-    print x7
-for x8 in getlist(upstream+urllist[7]):
-    print x8
-for x9 in getlist(upstream+urllist[8]):
-    print x9
+
 
 
