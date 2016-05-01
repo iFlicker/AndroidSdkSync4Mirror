@@ -86,7 +86,7 @@ def getlist(url):
     my.xs = []
     return newdat
 
-#分别获取所有目录下的文件,挑出xml单独放入
+#tools->分别获取所有目录下的文件,挑出xml单独放入
 def supergetlist(url):
     global urllist
     allist = [[] for i in range(10)]
@@ -141,6 +141,37 @@ def view_bar(num=1, sum=100, bar_word=":",speed="0"):
         timee = [0]
     sys.stdout.flush()
 
+# tools->将unicode对象转为string对象
+def byteify(input):
+    if isinstance(input, dict):
+        return {byteify(key): byteify(value) for key, value in input.iteritems()}
+    elif isinstance(input, list):
+        return [byteify(element) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    else:
+        return input
+
+# 检查本地status.list xml文件列表的lmt与上游源是否一致 (未完成)
+# 参数为supergetlist()的allist[9]
+def checkxml(liist):
+    global urllist
+    filejs = open("status.list", "r")
+    decoded = json.loads(filejs.read())
+    filejs.close()
+    decoded = byteify(decoded)
+    nliist = {}
+    for i in liist:
+        nliist[i] = getlmt("http://mirrors.opencas.cn/android/repository" + i)
+    for s in decoded["xml"]:
+        if decoded["xml"][s] != nliist[s]:
+            # 本地status.list xml和上游源的lmt不同,需要更新
+            pass
+        else:
+            # 本地status.list xml和上游源的lmt相同,需要休眠
+            pass
+
+
 #任务开始
 def taskbegin():
 
@@ -151,18 +182,14 @@ def timecycle():
 
     pass
 
-#检查fileHeader_Last-Modified-Time
-def checkfile(url):
+# tools->返回url的Last-Modified time
+def getlmt(url):
     tmpres = urllib2.urlopen(url)
     lmt = tmpres.info().getheader('Last-Modified')
-    # last work point ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    pass
+    return lmt
 
-def listanalyser(url):
 
-    pass
-
-#下载并写入status.list
+# tools->下载并写入status.list
 def downandwrite(liist):
     global syncdir
     global upstream
@@ -171,7 +198,7 @@ def downandwrite(liist):
 
     pass
 
-#判断是不是第一次运行
+#判断是不是第一次运行   (未完成)
 def isFirstrun():
 
     global syncdir
