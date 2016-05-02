@@ -1,11 +1,8 @@
 {
   "lastsynctime":"None",
   "isLastsyncSuccess":"False",
-  "/":
+  "xml":
   {
-    "file1.zip":"2013-04-08",
-    "file2.zip":"2013-05-08",
-    "file3.zip":"2013-06-08",
-    "file4.zip":"2013-07-08"
+    "/sys-img/android/sys-img.xml":"Wed, 13 Apr 2016 19:00:00 GMT"
   }
 }

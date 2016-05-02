@@ -14,7 +14,7 @@ class Logger(object):
         logging.basicConfig(level = logging.DEBUG,
                             format = '%(asctime)s [%(levelname)s] %(message)s',
                             datefmt ='%Y-%m-%d %H:%M:%S',
-                            filename = logdir + "assm " + filename + ".log",
+                            filename = logdir + "/" + "assm " + filename + ".log",
                             filemode = 'a'
         )
         # 日志输出到控制台

@@ -16,6 +16,8 @@ global logdir    #日志存放地址
 global checktime #检查时间间隔
 global upstream  #上游源地址
 
+global downflag
+downflag = False
 global flags
 flags = "null"
 global timee
@@ -152,35 +154,59 @@ def byteify(input):
     else:
         return input
 
-# 检查本地status.list xml文件列表的lmt与上游源是否一致 (未完成)
-# 参数为supergetlist()的allist[9]
+# 检查本地status.list xml文件列表的lmt与上游源是否一致   未完成(调用休眠)
+# 参数为 supergetlist的allist[9]
 def checkxml(liist):
     global urllist
+    global upstream
     filejs = open("status.list", "r")
     decoded = json.loads(filejs.read())
     filejs.close()
     decoded = byteify(decoded)
     nliist = {}
     for i in liist:
-        nliist[i] = getlmt("http://mirrors.opencas.cn/android/repository" + i)
+        nliist[i] = getlmt(upstream + i)
     for s in decoded["xml"]:
         if decoded["xml"][s] != nliist[s]:
             # 本地status.list xml和上游源的lmt不同,需要更新
-            pass
+            syncxml(liist,nliist)
+            return 0
         else:
-            # 本地status.list xml和上游源的lmt相同,需要休眠
-            pass
+            continue
 
+    # 没有return ,本地status.list xml和上游源的lmt相同,需要休眠
+    # ***************************************************************
+    #这儿调用休眠函数
 
-#任务开始
-def taskbegin():
+# 更新下载xml文件 参数为 supergetlist的allist[9] ,存入xml
+def syncxml(liist, nliist):
+    global upstream
+    global syncdir
+    for s in liist:
+        x = s.split("/")
+        ss = s.replace(x[-1], "")
+        crlog.info("download " + s)
+        urllib.urlretrieve(upstream + s,syncdir + ss , reporthook=report)
+    # 将新lmt和文件名写入status.list
+    filejs = open("status.list", "r")
+    decoded = json.loads(filejs.read())
+    filejs.close()
+    decoded = byteify(decoded)
+    for k in nliist:
+        decoded["xml"][k] = nliist[k]
+
+    filejss = open("status.list", "w")
+    filejss.truncate()
+    filejss.write(json.dumps(decoded))
+    filejss.close()
+    return 0
+
+# 第一次运行时 更新下载xml文件        (未完成)
+def syncxml_first(liist):
 
     pass
 
-#按时调动taskbegin
-def timecycle():
 
-    pass
 
 # tools->返回url的Last-Modified time
 def getlmt(url):
@@ -189,33 +215,81 @@ def getlmt(url):
     return lmt
 
 
-# tools->下载并写入status.list
+# tools->下载
+# 参数为 supergetlist()返回的list
 def downandwrite(liist):
+    global downflag
+    global urllist
     global syncdir
     global upstream
-    for x in liist:
-        urllib.urlretrieve(upstream + x, syncdir+ x, reporthook=report)
+    for i in range(0,9):
+        for x in i:
+            # 检查文件是否存在,存在就跳过,不存在就下载
+            if os.path.exists(syncdir + urllist[i] + x):
+                continue
+            else:
+                try:
+                    urllib.urlretrieve(upstream + urllist[i] + x, syncdir + urllist[i] + x, reporthook=report)
+                except Exception,arg:
+                    crlog.error(arg)
+                    if arg == "timed out" and os.path.exists(syncdir + urllist[i] + x):
+                        try:
+                            os.remove(syncdir + urllist[i] + x)
+                        except Exception:
+                            crlog.error("delete Failed file failed...,pls check file permission!")
+                    sys.exit(1)
+            # 抛出异常,如果网络错误则删除current文件
+    # 如果下载完毕,修改downflag为True, 表示下载完成
+    downflag = True
 
-    pass
 
 #判断是不是第一次运行   (未完成)
 def isFirstrun():
 
     global syncdir
-    if not os.path.exists("./status.list"):
+    if not os.path.exists("./status.list"):  # status.list不存在, 然后初始化
         crlog.info("first run")
         #创建文件夹
         crlog.info("create related directory")
         for x in urllist:
             os.makedirs(syncdir + x)
+        # 先下载更新xml
 
+        # 再创建status.list
         # 传入list并调用downandwrite()
         pass
-    else:
+    else:                                    # status.list存在,
         crlog.info("not first, will check last sync time")
         # 调用 检查上次更新时间 函数
         pass
     pass
+
+
+#任务开始      未完成(休眠)
+def taskbegin():
+    global downflag
+    global syncdir
+    global logdir
+    global checktime
+    global upstream
+    global urllist
+    # 获取所有文件信息
+    all_list = supergetlist(upstream)
+    # 检查上游源xml的lmt和本地status.list记录的是否相同
+    # 如果相同则休眠,如果不同则更新xml文件并将新的lmt写进status.list
+    checkxml(all_list[9])
+    # 然后调用 downandwrite 下载文件
+    downandwrite(all_list)
+    # 判断 downflag
+    if downflag:
+        # 下载完成,任务结束进入休眠********************************
+        pass
+    #
+
+
+
+
+
 
 #默认执行顺序列表
 pconfig()
