@@ -63,14 +63,49 @@ def pconfig():
     global logdir
     global checktime
     global upstream
-    filejs = open("assm.conf", "r")
-    decoded = json.loads(filejs.read())
+    try:
+        filejs = open("assm.conf", "r")
+    except Exception, arg:
+        crlog.error(arg)
+        crlog.error("load config file error,pls check it!")
+        sys.exit(1)
+
+    try:
+        decoded = json.loads(filejs.read())
+    except Exception,arg:
+        crlog.error(arg)
+        crlog.error("config file format error")
     filejs.close()
     syncdir = decoded["syncdir"]
     logdir = decoded["logdir"]
     checktime = decoded["checktime"]
     upstream = decoded["upstream"]
 
+
+# tools-> 休眠
+def sleep():
+    global checktime
+    # 休眠checktime小时
+    t = int(checktime * 3600)
+    crlog.warning("I will sleep for " + checktime + "hours.")
+    time.sleep(t)
+    crlog.warning("I'm awake and I will start task.")
+    taskbegin()
+    return 0
+
+# 检查上次更新时间
+def checksynctime():
+    global checktime
+    f = open("status.list","r")
+    decode = json.loads(f.read())
+    f.close()
+    decode = byteify(decode)
+    # 如果当前时间减去上次更新时间大于指定时间
+    if int(time.time()) - int(decode["lastsynctimesec"]) >= int(checktime*3600):
+        taskbegin()
+    else:  # 睡觉去
+        sleep()
+    return 0
 
 #tools->获取下载列表
 def getlist(url):
@@ -123,7 +158,7 @@ def report(count, blockSize, totalSize):
     if count%50==0:
         timee.append(time.time())
     sped =  int(( ((blockSize*50)/(timee[-1]-timee[-2])) / (1000*1000) )*1000)
-    sped = str(sped) + "Kb/s"
+    sped = str(sped) + "KB/s"
     percent = int(count*blockSize*100/totalSize)
     view_bar(num=percent,sum=100,bar_word=":",speed=sped)
 
@@ -154,7 +189,7 @@ def byteify(input):
     else:
         return input
 
-# 检查本地status.list xml文件列表的lmt与上游源是否一致   未完成(调用休眠)
+# 检查本地status.list xml文件列表的lmt与上游源是否一致
 # 参数为 supergetlist的allist[9]
 def checkxml(liist):
     global urllist
@@ -167,7 +202,11 @@ def checkxml(liist):
     for i in liist:
         nliist[i] = getlmt(upstream + i)
     for s in decoded["xml"]:
-        if decoded["xml"][s] != nliist[s]:
+        if len(decoded["xml"]) != len(nliist):
+            # 本地status.list xml元素数量和上游源xml文件数量不同,需要更新
+            syncxml(liist, nliist)
+            return 0
+        elif decoded["xml"][s] != nliist[s]:
             # 本地status.list xml和上游源的lmt不同,需要更新
             syncxml(liist,nliist)
             return 0
@@ -175,7 +214,8 @@ def checkxml(liist):
             continue
 
     # 没有return ,本地status.list xml和上游源的lmt相同,需要休眠
-    # ***************************************************************
+    sleep()
+    return 0
     #这儿调用休眠函数
 
 # 更新下载xml文件 参数为 supergetlist的allist[9] ,存入xml
@@ -201,10 +241,16 @@ def syncxml(liist, nliist):
     filejss.close()
     return 0
 
-# 第一次运行时 更新下载xml文件        (未完成)
+# 第一次运行时 更新下载xml文件
 def syncxml_first(liist):
-
-    pass
+    global upstream
+    global syncdir
+    for s in liist:
+        x = s.split("/")
+        ss = s.replace(x[-1], "")
+        crlog.info("download " + s)
+        urllib.urlretrieve(upstream + s,syncdir + ss , reporthook=report)
+    return 0
 
 
 
@@ -223,7 +269,7 @@ def downandwrite(liist):
     global syncdir
     global upstream
     for i in range(0,9):
-        for x in i:
+        for x in liist[i]:
             # 检查文件是否存在,存在就跳过,不存在就下载
             if os.path.exists(syncdir + urllist[i] + x):
                 continue
@@ -232,45 +278,108 @@ def downandwrite(liist):
                     urllib.urlretrieve(upstream + urllist[i] + x, syncdir + urllist[i] + x, reporthook=report)
                 except Exception,arg:
                     crlog.error(arg)
+                    downflag = False
                     if arg == "timed out" and os.path.exists(syncdir + urllist[i] + x):
                         try:
                             os.remove(syncdir + urllist[i] + x)
                         except Exception:
-                            crlog.error("delete Failed file failed...,pls check file permission!")
+                            crlog.error("delete failed file failed...,pls check files permission!")
+                    else:
+                        crlog.error("This may be a file write error,pls check files permission!")
                     sys.exit(1)
-            # 抛出异常,如果网络错误则删除current文件
+    # 抛出异常,如果网络错误则删除current文件
     # 如果下载完毕,修改downflag为True, 表示下载完成
     downflag = True
+
+def downandwrite_first(liist):
+    global downflag
+    global urllist
+    global syncdir
+    global upstream
+    for i in range(0,9):
+        for x in liist[i]:
+            try:
+                urllib.urlretrieve(upstream + urllist[i] + x, syncdir + urllist[i] + x, reporthook=report)
+            except Exception, arg:
+                crlog.error(arg)
+                downflag = False
+                if arg == "timed out" and os.path.exists(syncdir + urllist[i] + x):
+                    try:
+                        os.remove(syncdir + urllist[i] + x)
+                    except Exception:
+                        crlog.error("delete failed file failed...,pls check files permission!")
+                else:
+                    crlog.error("This may be a file write error,pls check files permission!")
+                sys.exit(1)
 
 
 #判断是不是第一次运行   (未完成)
 def isFirstrun():
-
+    global upstream
     global syncdir
-    if not os.path.exists("./status.list"):  # status.list不存在, 然后初始化
-        crlog.info("first run")
+    global downflag
+
+    allist = supergetlist(upstream)
+
+    if not os.path.exists("status.list"):  # status.list不存在, 然后初始化
+        crlog.info("first run...")
         #创建文件夹
-        crlog.info("create related directory")
+        crlog.info("create related directory.")
         for x in urllist:
-            os.makedirs(syncdir + x)
+            try:
+                os.makedirs(syncdir + x)
+            except Exception,arg:
+                crlog.error(arg)
+                crlog.error("directory create fail, pls check The directory permission!")
+                sys.exit(1)
+        crlog.info("directory create success~")
         # 先下载更新xml
-
+        syncxml_first(allist[9])
         # 再创建status.list
-        # 传入list并调用downandwrite()
-        pass
-    else:                                    # status.list存在,
+        decode = {"lastsynctime":"None","lastsynctimesec":"None","isLastsyncSuccess":"None","xml":{}}
+        for x in allist[9]:
+            decode["xml"][x] = getlmt(upstream + x)
+        f = open("status.list","w")
+        f.write(decode)
+        f.close()
+        # 传入list并调用downandwrite_first()
+        downandwrite_first(allist)
+        downflag = True
+
+        # 判断 downflag
+        if downflag:
+            # 下载完成, 修改status.list的lastsynctime和isLastsyncSuccess
+            fs = open("status.list", "r")
+            decoded = json.loads(fs.read())
+            fs.close()
+            decoded = byteify(decoded)
+
+            decoded["lastsynctimesec"] = str(int(time.time()))
+            timeArray = time.localtime(time.time())
+            otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+            decoded["lastsynctime"] = otherStyleTime
+
+            fss = open("status.list", "w")
+            fss.truncate()
+            fss.write(json.dumps(decoded))
+            fss.close()
+
+            # 任务结束进入休眠
+            sleep()
+            return 0
+
+    else:         # status.list存在,
         crlog.info("not first, will check last sync time")
-        # 调用 检查上次更新时间 函数
-        pass
-    pass
+        checksynctime()
 
 
-#任务开始      未完成(休眠)
+
+
+
+#任务开始
 def taskbegin():
     global downflag
     global syncdir
-    global logdir
-    global checktime
     global upstream
     global urllist
     # 获取所有文件信息
@@ -282,17 +391,31 @@ def taskbegin():
     downandwrite(all_list)
     # 判断 downflag
     if downflag:
-        # 下载完成,任务结束进入休眠********************************
-        pass
-    #
+        # 下载完成, 修改status.list的lastsynctime和isLastsyncSuccess
+        fs = open("status.list", "r")
+        decoded = json.loads(fs.read())
+        fs.close()
+        decoded = byteify(decoded)
 
+        decoded["lastsynctimesec"] = str(int(time.time()))
+        timeArray = time.localtime(time.time())
+        otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+        decoded["lastsynctime"] = otherStyleTime
 
+        fss = open("status.list", "w")
+        fss.truncate()
+        fss.write(json.dumps(decoded))
+        fss.close()
 
-
+        # 任务结束进入休眠
+        sleep()
+    return 0
 
 
 #默认执行顺序列表
 pconfig()
+isFirstrun()
+
 
 
 
