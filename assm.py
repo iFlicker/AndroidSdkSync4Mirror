@@ -25,6 +25,39 @@ timee = [0]
 global urllist
 urllist = ("/","/extras/auto/","/extras/gapid/","/extras/intel/","/sys-img/android/","/sys-img/android-tv/","/sys-img/android-wear/","/sys-img/google_apis/","/sys-img/x86/")
 
+
+# tools->将unicode对象转为string对象
+def byteify(input):
+    if isinstance(input, dict):
+        return {byteify(key): byteify(value) for key, value in input.iteritems()}
+    elif isinstance(input, list):
+        return [byteify(element) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    else:
+        return input
+
+def loadlogdir():
+    global logdir
+
+    try:
+        filejjs = open("assm.conf", "r")
+    except Exception, arg:
+        print "load assm.conf failed!"
+        sys.exit(1)
+
+    try:
+        decoded = json.loads(filejjs.read())
+    except Exception, arg:
+        print "load assm.conf failed!"
+        sys.exit(1)
+    filejjs.close()
+    decoded = byteify(decoded)
+    logdir = decoded["logdir"]
+    print "logdir is :" + logdir
+
+loadlogdir()  # get 日志目录
+os.makedirs(logdir)  #创建日志目录
 crlog = Logger(logdir) #实例化日志管理类
 my = Hparser()   #实例化解析类
 
@@ -60,6 +93,8 @@ def pconfig():
     global logdir
     global checktime
     global upstream
+
+    crlog.info("loading config file......")
     try:
         filejs = open("assm.conf", "r")
     except Exception, arg:
@@ -76,8 +111,9 @@ def pconfig():
         crlog.critical("exit")
         sys.exit(1)
     filejs.close()
+    decoded = byteify(decoded)
+    crlog.info("config file load successed!")
     syncdir = decoded["syncdir"]
-    logdir = decoded["logdir"]
     checktime = decoded["checktime"]
     upstream = decoded["upstream"]
 
@@ -97,7 +133,7 @@ def sleep():
 # 检查上次更新时间
 def checksynctime():
     global checktime
-
+    crlog.info("check last sync time")
     try:
         f = open("status.list", "r")
     except Exception,arg:
@@ -110,8 +146,10 @@ def checksynctime():
     decode = byteify(decode)
     # 如果当前时间减去上次更新时间大于指定时间 任务开始
     if int(time.time()) - int(decode["lastsynctimesec"]) >= int(checktime*3600):
+        crlog.info("I will start task!")
         taskbegin()
     else:  # 睡觉去
+        crlog.warning("Distance from the last update time is less than you setting times .")
         sleep()
     return 0
 
@@ -127,16 +165,6 @@ def getlmt(url):
     lmt = tmpres.info().getheader('Last-Modified')
     return lmt
 
-# tools->将unicode对象转为string对象
-def byteify(input):
-    if isinstance(input, dict):
-        return {byteify(key): byteify(value) for key, value in input.iteritems()}
-    elif isinstance(input, list):
-        return [byteify(element) for element in input]
-    elif isinstance(input, unicode):
-        return input.encode('utf-8')
-    else:
-        return input
 
 #tools->获取下载列表
 def getlist(url):
@@ -170,7 +198,7 @@ def getlist(url):
 def supergetlist(url):
     global urllist
     allist = [[] for i in range(10)]
-
+    crlog.info("I will get all the file...")
     allist[0] = getlist(url + urllist[0])
     allist[1] = getlist(url + urllist[1])
     allist[2] = getlist(url + urllist[2])
@@ -192,6 +220,7 @@ def supergetlist(url):
     for s in range(0,9):
         for sx in delallist[s]:
             allist[s].remove(sx)
+    crlog.info("get all file list successed!")
     return allist
 
 #urllib.urlretrieve的参数reporthook回调函数
@@ -227,6 +256,7 @@ def view_bar(num=1, sum=100, bar_word=":",speed="0"):
 def checkxml(liist):
     global urllist
     global upstream
+    crlog.info("check the local file LMT and upstream file LMT is the same...")
     try:
         filejs = open("status.list", "r")
     except Exception,arg:
@@ -249,16 +279,19 @@ def checkxml(liist):
     for s in decoded["xml"]:
         if len(decoded["xml"]) != len(nliist):      # 这儿可能有问题  可能需要修改逻辑*************
             # 本地status.list xml元素数量和上游源xml文件数量不同,需要更新
+            crlog.info("The number of local files is different from the upstream, need sync")
             syncxml(liist, nliist)
             return 0
         elif decoded["xml"][s] != nliist[s]:
             # 本地status.list xml和上游源的lmt不同,需要更新
+            crlog.info("Local file LMT and upstream files are different, need sync")
             syncxml(liist,nliist)
             return 0
         else:
             continue
 
     # 没有return ,本地status.list xml和上游源的lmt相同,需要休眠
+    crlog.info("Local file LMT and upstream files are same,")
     sleep()
     return 0
     #这儿调用休眠函数
@@ -267,12 +300,16 @@ def checkxml(liist):
 def syncxml(liist, nliist):
     global upstream
     global syncdir
+    crlog.info("sync xml files...")
     for s in liist:
         x = s.split("/")
         ss = s.replace(x[-1], "")
         crlog.info("download " + s)
         try:
-            urllib.urlretrieve(upstream + s, syncdir + ss, reporthook=report)
+            if ss == "/":
+                urllib.urlretrieve(upstream + s, syncdir + s, reporthook=report)
+            else:
+                urllib.urlretrieve(upstream + s, syncdir + ss + x[-1], reporthook=report)
         except Exception,arg:
             crlog.error(arg)
             crlog.error("download xml file failed!")
@@ -300,25 +337,31 @@ def syncxml(liist, nliist):
         crlog.critical("exit")
         sys.exit(1)
     filejss.truncate()
-    filejss.write(json.dumps(decoded))
+    filejss.write(str(json.dumps(decoded)))
     filejss.close()
+    crlog.info("sync xml files successed!")
     return 0
 
 # 第一次运行时 更新下载xml文件
 def syncxml_first(liist):
     global upstream
     global syncdir
+    crlog.info("sync xml files...")
     for s in liist:
         x = s.split("/")
         ss = s.replace(x[-1], "")
-        crlog.info("download " + s)
+        crlog.info("download " + s + ss)
         try:
-            urllib.urlretrieve(upstream + s, syncdir + ss, reporthook=report)
+            if ss == "/":
+                urllib.urlretrieve(upstream + s, syncdir + s, reporthook=report)
+            else:
+                urllib.urlretrieve(upstream + s, syncdir + ss + x[-1], reporthook=report)
         except Exception,arg:
             crlog.error(arg)
             crlog.error("download xml file failed!")
             crlog.critical("exit")
             sys.exit(1)
+    crlog.info("sync xml files successed!")
     return 0
 
 
@@ -330,6 +373,7 @@ def downandwrite(liist):
     global urllist
     global syncdir
     global upstream
+    crlog.info("I will download files.")
     for i in range(0,9):
         for x in liist[i]:
             # 检查文件是否存在,存在就跳过,不存在就下载
@@ -337,6 +381,7 @@ def downandwrite(liist):
                 continue
             else:
                 try:
+                    crlog.info("download " + x)
                     urllib.urlretrieve(upstream + urllist[i] + x, syncdir + urllist[i] + x, reporthook=report)
                 except Exception,arg:
                     crlog.error(arg)
@@ -352,6 +397,7 @@ def downandwrite(liist):
                     sys.exit(1)
     # 抛出异常,如果网络错误则删除current文件
     # 如果下载完毕,修改downflag为True, 表示本次下载完成
+    crlog.info("download files successed!")
     downflag = True
 
 # 第一次运行下载, 参数为 supergetlist()返回的list
@@ -360,9 +406,11 @@ def downandwrite_first(liist):
     global urllist
     global syncdir
     global upstream
+    crlog.info("I will download files.")
     for i in range(0,9):
         for x in liist[i]:
             try:
+                crlog.info("download " + x)
                 urllib.urlretrieve(upstream + urllist[i] + x, syncdir + urllist[i] + x, reporthook=report)
             except Exception, arg:
                 crlog.error(arg)
@@ -376,7 +424,7 @@ def downandwrite_first(liist):
                     crlog.error("This may be a file write error,pls check files permission!")
                 crlog.critical("exit")
                 sys.exit(1)
-
+    crlog.info("download files successed!")
 
 #判断是不是第一次运行   (未完成)
 def isFirstrun():
@@ -392,7 +440,10 @@ def isFirstrun():
         crlog.info("create related directory.")
         for x in urllist:
             try:
-                os.makedirs(syncdir + x)
+                if os.path.exists(syncdir + x):
+                    continue
+                else:
+                    os.makedirs(syncdir + x)
             except Exception,arg:
                 crlog.error(arg)
                 crlog.error("directory create fail, pls check The directory permission!")
@@ -412,7 +463,7 @@ def isFirstrun():
             crlog.error("write status.list failed, pls check it!")
             crlog.critical("exit")
             sys.exit(1)
-        f.write(decode)
+        f.write(str(decode))
         f.close()
         # 传入list并调用downandwrite_first()
         downandwrite_first(allist)
@@ -445,9 +496,9 @@ def isFirstrun():
                 crlog.critical("exit")
                 sys.exit(1)
             fss.truncate()
-            fss.write(json.dumps(decoded))
+            fss.write(str(json.dumps(decoded)))
             fss.close()
-
+            crlog.info("because download successed, I will sleep...")
             # 任务结束进入休眠
             sleep()
             return 0
@@ -455,8 +506,6 @@ def isFirstrun():
     else:         # status.list存在, 检查上次更新时间
         crlog.info("not first, will check last sync time")
         checksynctime()
-
-
 
 
 
@@ -504,11 +553,13 @@ def taskbegin():
         fss.close()
 
         # 任务结束进入休眠
+        crlog.info("current task is over.")
         sleep()
     return 0
 
 
 #测试执行顺序列表
+
 pconfig()
 isFirstrun()
 
