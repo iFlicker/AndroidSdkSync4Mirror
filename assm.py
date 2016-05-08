@@ -64,34 +64,41 @@ def loadlogdir():
         print "create log directory."
         os.makedirs(logdir)
 
-loadlogdir()  # 初始化日志目录
-crlog = Logger(logdir) #实例化日志管理类
-my = Hparser()   #实例化解析类
 
 
 # 程序入口,参数操作  (未完善)
 option,args = getopt.getopt(sys.argv[1:],"Vhs:",["version","help","start","stop","status"])
 for key,value in option:
     if key in ("-V","--version"):
-        print "current version" #待定
+        print "AndroidSdkSync4Mirror 0.99" #待定
+        sys.exit(0)
     if key in ("-h","--help"):
-        print "args list"       #待定
+        print "-V --version : show current version"       #待定
+        print "-s start     : start task"
+        print "-s stop      : stop current task"
+        print "-s status    : show current status"
+        print ""
+        print "-h --help show args"
+        sys.exit(0)
     if key == ("-s"):
         if value == "start":
-            print "start task"  #待定
-            break
+            print "start task -the function cannot be used now"  #待定
+            sys.exit(0)
         elif value == "stop":
-            print "stop task"   #待定
-            break
-        elif value == "status":
+            print "stop task -the function cannot be used now"   #待定
+            sys.exit(0)
+        elif value == "status -the function cannot be used now":
             print "return current status"  #待定
-            break
+            sys.exit(0)
     if key in ("--start"):
-        print "start task"      #待定  value为配置脚本路径
+        print "start task -the function cannot be used now"      #待定  value为配置脚本路径
+        sys.exit(0)
     if key in ("--stop"):
-        print "stop task"       #待定
+        print "stop task -the function cannot be used now"       #待定
+        sys.exit(0)
     if key in ("--status"):
-        print "return current status"      #待定
+        print "return current status -the function cannot be used now"      #待定
+        sys.exit(0)
 
 
 # 检测并加载配置文件
@@ -481,7 +488,7 @@ def isFirstrun():
         # 先下载更新xml
         syncxml_first(allist[9])
         # 再创建status.list ,并写入lmt
-        decode = {"lastsynctime":"None","lastsynctimesec":"None","isLastsyncSuccess":"None","xml":{}}
+        decode = {"lastsynctime":"None","lastsynctimesec":"None","isLastsyncSuccess":"False","xml":{}}
         for x in allist[9]:
             decode["xml"][x] = getlmt(upstream + x)
         try:
@@ -515,6 +522,7 @@ def isFirstrun():
             timeArray = time.localtime(time.time())
             otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
             decoded["lastsynctime"] = otherStyleTime
+            decoded["isLastsyncSuccess"] = "True"
 
             try:
                 fss = open("status.list", "w")
@@ -529,7 +537,6 @@ def isFirstrun():
             crlog.info("because download successed, I will sleep...")
             # 任务结束进入休眠
             sleep()
-            return 0
 
     else:         # status.list存在, 检查上次更新时间
         crlog.info("not first, will check last sync time")
@@ -567,6 +574,7 @@ def taskbegin():
         timeArray = time.localtime(time.time())
         otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
         decoded["lastsynctime"] = otherStyleTime
+        decoded["isLastsyncSuccess"] = "True"
 
         try:
             fss = open("status.list", "w")
@@ -586,6 +594,10 @@ def taskbegin():
 
 
 #测试执行顺序列表
+
+loadlogdir()  # 初始化日志目录
+crlog = Logger(logdir) #实例化日志管理类
+my = Hparser()   #实例化解析类
 
 pconfig()
 isFirstrun()
