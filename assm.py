@@ -135,7 +135,7 @@ def pconfig():
 def sleep():
     global checktime
     # 休眠checktime小时
-    t = int(checktime * 3600)
+    t = int(int(checktime) * 3600)
     crlog.warning("I will sleep for " + checktime + "hours.")
     time.sleep(t)
     crlog.warning("I'm awake and I will start task.")
@@ -164,7 +164,7 @@ def checksynctime():
         isFirstrun()
         pass
     else:
-        if int(time.time()) - int(decode["lastsynctimesec"]) >= int(checktime * 3600):
+        if int(time.time()) - int(decode["lastsynctimesec"]) >= int(int(checktime) * 3600):
             crlog.info("Distance from the last update time is more than you setting times .")
             crlog.info("I will start task!")
             taskbegin()
