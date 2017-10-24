@@ -6,8 +6,8 @@ Android SDK Sync for Mirror.site
 
 * * *
 
-首次测试可用 (Commits on May 7, 2016)(c69f8d2)
-
+<del>首次测试可用 (Commits on May 7, 2016)(c69f8d2)</del>
+已停止维护并弃用，可以尝试站长用dotNet实现的 https://github.com/honkerqifan/AndroidSDKPull
 * * *
 
 ## 功能
